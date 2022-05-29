@@ -7,12 +7,14 @@ import matplotlib.pyplot as plt
 
 
 class Actions(Enum):
-    Sell = 0
+    Hold = 0
+    Sell = -1
     Buy = 1
 
 
 class Positions(Enum):
-    Short = 0
+    Short = -1
+    NoPosition = 0
     Long = 1
 
     def opposite(self):
@@ -20,10 +22,9 @@ class Positions(Enum):
 
 
 class TradingEnv(gym.Env):
-
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, df, window_size):
+    def __init__(self, df, window_size, initial_capital=100_00):
         assert df.ndim == 2
 
         self.seed()
@@ -40,20 +41,19 @@ class TradingEnv(gym.Env):
         self._start_tick = self.window_size
         self._end_tick = len(self.prices) - 1
         self._done = None
+        self.is_trade_open = None
         self._current_tick = None
         self._last_trade_tick = None
         self._position = None
         self._position_history = None
         self._total_reward = None
-        self._total_profit = None
+        self._total_profit = initial_capital
         self._first_rendering = None
         self.history = None
-
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
-
 
     def reset(self):
         self._done = False
@@ -66,7 +66,6 @@ class TradingEnv(gym.Env):
         self._first_rendering = True
         self.history = {}
         return self._get_observation()
-
 
     def step(self, action):
         self._done = False
@@ -82,7 +81,7 @@ class TradingEnv(gym.Env):
 
         trade = False
         if ((action == Actions.Buy.value and self._position == Positions.Short) or
-            (action == Actions.Sell.value and self._position == Positions.Long)):
+                (action == Actions.Sell.value and self._position == Positions.Long)):
             trade = True
 
         if trade:
@@ -92,18 +91,16 @@ class TradingEnv(gym.Env):
         self._position_history.append(self._position)
         observation = self._get_observation()
         info = dict(
-            total_reward = self._total_reward,
-            total_profit = self._total_profit,
-            position = self._position.value
+            total_reward=self._total_reward,
+            total_profit=self._total_profit,
+            position=self._position.value
         )
         self._update_history(info)
 
         return observation, step_reward, self._done, info
 
-
     def _get_observation(self):
-        return self.signal_features[(self._current_tick-self.window_size+1):self._current_tick+1]
-
+        return self.signal_features[(self._current_tick - self.window_size + 1):self._current_tick + 1]
 
     def _update_history(self, info):
         if not self.history:
@@ -111,7 +108,6 @@ class TradingEnv(gym.Env):
 
         for key, value in info.items():
             self.history[key].append(value)
-
 
     def render(self, mode='human'):
 
@@ -140,7 +136,6 @@ class TradingEnv(gym.Env):
 
         plt.pause(0.01)
 
-
     def render_all(self, mode='human'):
         window_ticks = np.arange(len(self._position_history))
         plt.plot(self.prices)
@@ -160,31 +155,27 @@ class TradingEnv(gym.Env):
             "Total Reward: %.6f" % self._total_reward + ' ~ ' +
             "Total Profit: %.6f" % self._total_profit
         )
-        
-        
+
     def close(self):
         plt.close()
-
 
     def save_rendering(self, filepath):
         plt.savefig(filepath)
 
-
     def pause_rendering(self):
         plt.show()
-
 
     def _process_data(self):
         raise NotImplementedError
 
-
     def _calculate_reward(self, action):
         raise NotImplementedError
-
 
     def _update_profit(self, action):
         raise NotImplementedError
 
-
     def max_possible_profit(self):  # trade fees are ignored
         raise NotImplementedError
+
+    def get_account_value(self):
+        return self._total_profit
