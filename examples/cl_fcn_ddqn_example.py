@@ -27,17 +27,19 @@ def add_cyclical_features(df):
     return df
 
 
-def model_testing(env, agent):
+def model_testing_loop(env, agent):
 
     i = 0
 
     state = env.reset()
+    state = state.reshape(1, -1)[0]
 
     while True:
 
         action = agent.act(state, eval_mode=True)
 
         next_state, reward, done, info = env.step(action)
+        next_state = next_state.reshape(1, -1)[0]
 
         state = next_state
 
@@ -52,20 +54,21 @@ def model_testing(env, agent):
     plt.cla()
     env.render_all()
     plt.title(f'Testing')
-    plt.savefig(f'models/ddqn_cl_checkpoints/2022-06-15T15-05-57/cl_res.png', dpi=300)
-    env.get_trading_df().to_csv('models/ddqn_cl_checkpoints/2022-06-15T15-05-57/testing_set.csv')
+    plt.savefig(f'models/fcn_ddqn_cl_checkpoints/2022-06-15T09-03-17/cl_res.png', dpi=300)
 
 
 def train_loop(env, episodes: int, agent, logger):
     for episode in range(episodes):
 
         state = env.reset()
+        state = state.reshape(1, -1)[0]
 
         while True:
 
             action = agent.act(state)
 
             next_state, reward, done, info = env.step(action)
+            next_state = next_state.reshape(1, -1)[0]
 
             agent.cache(state, next_state, action, reward, done)
 
@@ -102,33 +105,38 @@ if __name__ == '__main__':
     cl_df = cl_df.set_index('Date')
     cl_df = add_cyclical_features(cl_df)
     window_size = 115
-    save_dir = Path("models/ddqn_cl_checkpoints") / datetime.now().strftime("%Y-%m-%dT%H-%M-%S") if not args.test else args.path
-    episodes = 400 if not args.test else 1
+    save_dir = Path("models/fcn_ddqn_cl_checkpoints") / datetime.now().strftime("%Y-%m-%dT%H-%M-%S") if not args.test else args.path
+    episodes = 500 if not args.test else 1
 
     if not args.test:
         save_dir.mkdir(parents=True)
 
     if not args.test:
-        last_idx = int(np.round(len(cl_df) * 0.8))
-        env = FuturesEnv(df=cl_df[0:last_idx],
+        env = FuturesEnv(df=cl_df,
                          window_size=window_size,
                          frame_bound=(window_size, len(cl_df)))
     else:
         env = FuturesEnv(df=cl_df,
                          window_size=window_size,
-                         frame_bound=(len(cl_df) - 660, len(cl_df)))
+                         frame_bound=(len(cl_df) - 2360, len(cl_df)))
 
     agent = DDQNTradingAgent(
-        env.observation_space.shape[1],
+        env.observation_space.shape[1] * window_size,
         env.action_space.n,
         save_dir,
+        recurrent=False,
+        hidden_size=400,
+        n_layers=4
     )
 
     if args.test:
-        agent.load_model('models/ddqn_cl_checkpoints/2022-06-15T15-05-57/ddqn_net_9.chkpt', recurrent=True)
+        agent.load_model('models/fcn_ddqn_cl_checkpoints/2022-06-15T09-03-17/ddqn_net_27.chkpt',
+                         recurrent=False,
+                         hidden_size=400,
+                         n_layers=4)
 
     if args.test:
-        model_testing(env, agent)
+        model_testing_loop(env, agent)
     else:
         logger = MetricLogger(save_dir)
         train_loop(env, episodes, agent, logger)

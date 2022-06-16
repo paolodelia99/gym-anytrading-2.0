@@ -16,7 +16,11 @@ class DDQNTradingAgent(TradingAgent):
                  exploration_rate_min=0.1,
                  gamma=0.9,
                  lr=0.001,
-                 learn_every=23):
+                 learn_every=23,
+                 testing_mode=False,
+                 recurrent=True,
+                 hidden_size=64,
+                 n_layers=3):
         """
         Constructor of the trading agent
         :param state_dim: dimension of the input state of the neural net
@@ -27,7 +31,7 @@ class DDQNTradingAgent(TradingAgent):
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        self.net = DDQN(self.state_dim, self.action_dim, 64, 3).float()
+        self.net = DDQN(self.state_dim, self.action_dim, hidden_size, n_layers, recurrent=recurrent).float()
         self.net = self.net.to(self.device)
 
         self.exploration_rate = 1
@@ -49,10 +53,13 @@ class DDQNTradingAgent(TradingAgent):
         self.learn_every = learn_every  # no. of experiences between updates to Q_online
         self.sync_every = 1e4  # no. of experiences between Q_target & Q_online sync
 
-    def act(self, state):
+        self.testing_mode = testing_mode
+
+    def act(self, state, eval_mode=False):
         """
         Given a state, choose an epsilon-greedy action and update value of step.
         :param state: LazyFrame - a single observation of the current statem dimension is (state_dim)
+        :param eval_mode:
         :return: action_idx (int): an integer representing which action Mario will perform
         """
         # EXPLORE
@@ -62,9 +69,13 @@ class DDQNTradingAgent(TradingAgent):
         # EXPLOIT
         else:
             state = state.__array__()
-            state = torch.tensor(state).to(self.device)
-            state = state.float().unsqueeze(0)
-            action_values = self.net(state, model="online")
+            state = torch.tensor(state).to(self.device).float()
+            state = state.unsqueeze(0)
+            if eval_mode:
+                self.net.eval()
+                action_values = self.net(state, model="target")
+            else:
+                action_values = self.net(state, model="online")
             action_idx = torch.argmax(action_values, axis=1).item()
 
         # decrease exploration_rate
@@ -170,9 +181,13 @@ class DDQNTradingAgent(TradingAgent):
 
         return td_est.mean().item(), loss
 
-    def load_model(self, model, epsilon):
-        self.net = model
-        self.exploration_rate = epsilon
+    def load_model(self, path, recurrent, hidden_size=64,
+                 n_layers=3, testing=True):
+        model = DDQN(self.state_dim, self.action_dim, hidden_size, n_layers, recurrent).float()
+        model.load_state_dict(torch.load(path)['model'])
+        model.eval()
+        self.net = model.to(device=self.device)
+        self.exploration_rate = torch.load(path)['epsilon'] if not testing else 0.0
 
     def set_current_steps(self, current_steps: int):
         self.curr_step = current_steps

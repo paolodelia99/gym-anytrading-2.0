@@ -8,8 +8,8 @@ import matplotlib.pyplot as plt
 
 class Actions(Enum):
     Hold = 0
-    Sell = -1
-    Buy = 1
+    Sell = 1
+    Buy = 2
 
 
 class Positions(Enum):
@@ -59,8 +59,9 @@ class TradingEnv(gym.Env):
         self._done = False
         self._current_tick = self._start_tick
         self._last_trade_tick = self._current_tick - 1
-        self._position = Positions.Short
+        self._position = Positions.NoPosition
         self._position_history = (self.window_size * [None]) + [self._position]
+        self._action_history = (self.window_size * [0]) + [Actions.Hold]
         self._total_reward = 0.
         self._total_profit = 1.  # unit
         self._first_rendering = True
@@ -89,6 +90,7 @@ class TradingEnv(gym.Env):
             self._last_trade_tick = self._current_tick
 
         self._position_history.append(self._position)
+        self._action_history.append(action)
         observation = self._get_observation()
         info = dict(
             total_reward=self._total_reward,
@@ -137,15 +139,15 @@ class TradingEnv(gym.Env):
         plt.pause(0.01)
 
     def render_all(self, mode='human'):
-        window_ticks = np.arange(len(self._position_history))
+        window_ticks = np.arange(len(self._action_history))
         plt.plot(self.prices)
 
         short_ticks = []
         long_ticks = []
         for i, tick in enumerate(window_ticks):
-            if self._position_history[i] == Positions.Short:
+            if self._action_history[i] == Actions.Sell.value:
                 short_ticks.append(tick)
-            elif self._position_history[i] == Positions.Long:
+            elif self._action_history[i] == Actions.Buy.value:
                 long_ticks.append(tick)
 
         plt.plot(short_ticks, self.prices[short_ticks], 'ro')
