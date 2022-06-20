@@ -9,7 +9,8 @@ from sklearn.preprocessing import StandardScaler
 
 class FuturesEnv(TradingEnv):
 
-    def __init__(self, df, window_size, frame_bound, pos_size: float = 0.05, risk_per_contract=1_000,
+    def __init__(self, df, window_size, frame_bound, pos_size: float = 0.05,
+                 risk_per_contract=1_000,
                  point_value=1_000, initial_capital=1_000_000):
         assert len(frame_bound) == 2
 
@@ -41,7 +42,7 @@ class FuturesEnv(TradingEnv):
         self.history = {}
         return self._get_observation()
 
-    def check_if_close_trade(self, action):
+    def _check_if_close_trade(self, action):
         if self._position == Positions.Short:
             return action == Actions.Buy.value
         elif self._position == Positions.Long:
@@ -49,7 +50,7 @@ class FuturesEnv(TradingEnv):
         else:
             return False
 
-    def check_if_open_trade(self, action):
+    def _check_if_open_trade(self, action):
         if self._position == Positions.NoPosition:
             return action == Actions.Sell.value or action == Actions.Buy.value
 
@@ -67,11 +68,11 @@ class FuturesEnv(TradingEnv):
 
         self._update_profit(action)
 
-        if self.check_if_open_trade(action):
+        if self._check_if_open_trade(action):
             self._last_trade_tick = self._current_tick
-            self.set_position(action)
-        elif self.check_if_close_trade(action):
-            self.set_no_position()
+            self._set_position(action)
+        elif self._check_if_close_trade(action):
+            self._set_no_position()
 
         self._position_history.append(self._position)
         self._action_history.append(action)
@@ -116,7 +117,7 @@ class FuturesEnv(TradingEnv):
 
     def _update_profit(self, action):
 
-        if self.check_if_close_trade(action) or self._done:
+        if self._check_if_close_trade(action) or self._done:
             current_price = FuturesEnv.close_rev_scaling(self.prices[self._current_tick], self.sc, self.close_idx)
             last_trade_price = FuturesEnv.close_rev_scaling(self.prices[self._last_trade_tick], self.sc, self.close_idx)
             n_contracts = np.floor((self._total_profit * self.pos_size) / self.risk_per_contract)
@@ -134,13 +135,13 @@ class FuturesEnv(TradingEnv):
     def max_possible_profit(self):
         pass
 
-    def set_position(self, action):
+    def _set_position(self, action):
         if action == Actions.Buy.value:
             self._position = Positions.Long
         elif action == Actions.Sell.value:
             self._position = Positions.Short
 
-    def set_no_position(self):
+    def _set_no_position(self):
         self._position = Positions.NoPosition
 
     def get_trading_df(self):
@@ -152,4 +153,5 @@ class FuturesEnv(TradingEnv):
             index=self.df_index[start:end]
         )
         final_df.loc[:, 'action'] = np.array(self._action_history)
+        final_df.loc[:, 'total_profit'] = np.array(((self.window_size + 1) * [self.initial_capital]) + self.history['total_profit'])
         return final_df
