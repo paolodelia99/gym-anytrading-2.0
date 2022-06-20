@@ -95,7 +95,9 @@ complete [source code](https://github.com/paolodelia99/gym-anytrading-2.0/blob/m
 > `max_possible_profit`: The maximum possible profit that an RL agent can obtain regardless of trade fees.
 
 ### FutureEnv
-This is a concrete class which inherits TradingEnv and implements its abstract methods. Also, it has some specific properties for the *FOREX* market. For more information refer to the [source code](https://github.com/AminHP/gym-anytrading/blob/master/gym_anytrading/envs/forex_env.py).
+This is a concrete class which inherits TradingEnv and implements its abstract methods. 
+Also, it has some specific properties for the *Future* market.
+For more information refer to the [source code](https://github.com/paolodelia99/gym-anytrading-2.0/blob/master/gym_anytrading/envs/future_env.py).
 
 * Properties:
 > `frame_bound`: A tuple which specifies the start and end of `df`. It is passed in the class' constructor.
@@ -208,9 +210,15 @@ plt.show()
 - You can use `render_all` method to avoid rendering on each step and prevent time-wasting.
 - As you see, the first **10** points (`window_size`=10) on the plot don't have a *position*. Because they aren't involved in calculating reward, profit, etc. They just display the first observations. So the environment's `_start_tick` and initial `_last_trade_tick` are **10** and **9**.
 
-#### Mix with `stable-baselines` and `quantstats`
+## Notebooks
 
-[Here](https://github.com/AminHP/gym-anytrading/blob/master/examples/a2c_quantstats.ipynb) is an example that mixes `gym-anytrading` with the mentioned famous libraries and shows how to utilize our trading environments in other RL or trading libraries.
+- with stable baseline and quantstats
+  - [A2C](https://github.com/paolodelia99/gym-anytrading-2.0/blob/master/gym_anytrading/examples/a2c_cl_stablebaseline.ipynb)
+  - [DQN](https://github.com/paolodelia99/gym-anytrading-2.0/blob/master/gym_anytrading/examples/dqn_cl_stablebaseline.ipynb)
+- with the `agent` class
+  - [DQN daily data](https://github.com/paolodelia99/gym-anytrading-2.0/blob/master/gym_anytrading/examples/ddqn_cl_d.ipynb)
+  - [DQN hourly data](https://github.com/paolodelia99/gym-anytrading-2.0/blob/master/gym_anytrading/examples/ddqn_cl_h.ipynb)
+
 
 ### Extend and manipulate TradingEnv
 
