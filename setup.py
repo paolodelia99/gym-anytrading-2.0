@@ -1,12 +1,12 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='gym_anytrading',
-    version='1.3.0',
+    name='gym_anytrading-2.0',
+    version='0.0.1',
     packages=find_packages(),
 
-    author='AminHP',
-    author_email='mdan.hagh@gmail.com',
+    author='Paolo D\'Elia',
+    author_email='paolo.delia99@gmail.com',
 
     install_requires=[
         'gym>=0.12.5',

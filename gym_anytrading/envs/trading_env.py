@@ -146,9 +146,11 @@ class TradingEnv(gym.Env):
         long_ticks = []
         for i, tick in enumerate(window_ticks):
             if self._action_history[i] == Actions.Sell.value:
-                short_ticks.append(tick)
+                if i != 0 and self._action_history[i - 1] != Actions.Sell.value:
+                    short_ticks.append(tick)
             elif self._action_history[i] == Actions.Buy.value:
-                long_ticks.append(tick)
+                if i != 0 and self._action_history[i - 1] != Actions.Buy.value:
+                    long_ticks.append(tick)
 
         plt.plot(short_ticks, self.prices[short_ticks], 'ro')
         plt.plot(long_ticks, self.prices[long_ticks], 'go')
