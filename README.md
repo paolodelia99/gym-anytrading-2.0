@@ -269,3 +269,10 @@ class MyStocksEnv(StocksEnv):
 prices, signal_features = my_process_data(df=STOCKS_GOOGL, window_size=30, frame_bound=(30, len(STOCKS_GOOGL)))
 env = MyStocksEnv(prices, signal_features, df=STOCKS_GOOGL, window_size=30, frame_bound=(30, len(STOCKS_GOOGL)))
 ```
+
+
+## Todos
+
+- [ ] Add continuous action
+- [ ] Improve render environment
+- [ ] clean the Future env class code

@@ -1,10 +1,10 @@
-import warnings
-
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from .trading_env import TradingEnv
-from .trading_env import Actions, Positions
 from sklearn.preprocessing import StandardScaler
+
+from .trading_env import Actions, Positions
+from .trading_env import TradingEnv
 
 
 class FuturesEnv(TradingEnv):
@@ -27,6 +27,9 @@ class FuturesEnv(TradingEnv):
         self.initial_capital = initial_capital
         self.risk_per_contract = risk_per_contract
         self.point_value = point_value
+        self.long_ticks = []
+        self.short_ticks = []
+
 
     def reset(self):
         self._done = False
@@ -40,6 +43,8 @@ class FuturesEnv(TradingEnv):
         self._total_profit = self.initial_capital
         self._first_rendering = True
         self.history = {}
+        self.long_ticks = []
+        self.short_ticks = []
         return self._get_observation()
 
     def _check_if_close_trade(self, action):
@@ -70,9 +75,9 @@ class FuturesEnv(TradingEnv):
 
         if self._check_if_open_trade(action):
             self._last_trade_tick = self._current_tick
-            self._set_position(action)
+            self._set_position(action, self._current_tick)
         elif self._check_if_close_trade(action):
-            self._set_no_position()
+            self._set_no_position(self._current_tick)
 
         self._position_history.append(self._position)
         self._action_history.append(action)
@@ -135,13 +140,20 @@ class FuturesEnv(TradingEnv):
     def max_possible_profit(self):
         pass
 
-    def _set_position(self, action):
+    def _set_position(self, action, current_tick):
         if action == Actions.Buy.value:
             self._position = Positions.Long
+            self.long_ticks.append(current_tick)
         elif action == Actions.Sell.value:
             self._position = Positions.Short
+            self.short_ticks.append(current_tick)
 
-    def _set_no_position(self):
+    def _set_no_position(self, current_tick):
+        if self._position == Positions.Short:
+            self.long_ticks.append(current_tick)
+        elif self._position == Positions.Long:
+            self.short_ticks.append(current_tick)
+
         self._position = Positions.NoPosition
 
     def get_trading_df(self):
@@ -155,3 +167,12 @@ class FuturesEnv(TradingEnv):
         final_df.loc[:, 'action'] = np.array(self._action_history)
         final_df.loc[:, 'total_profit'] = np.array(((self.window_size + 1) * [self.initial_capital]) + self.history['total_profit'])
         return final_df
+
+    def render_all(self, mode='human'):
+        plt.plot(self.short_ticks, self.prices[self.short_ticks], 'ro')
+        plt.plot(self.long_ticks, self.prices[self.long_ticks], 'go')
+
+        plt.suptitle(
+            "Total Reward: %.6f" % self._total_reward + ' ~ ' +
+            "Total Profit: %.6f" % self._total_profit
+        )
