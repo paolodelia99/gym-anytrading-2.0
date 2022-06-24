@@ -7,8 +7,8 @@ import numpy as np
 import pandas as pd
 import torch
 
-from gym_anytrading.agents.DDQN_agent import DDQNTradingAgent
-from gym_anytrading.envs.future_env import FuturesEnv
+from gym_anytrading2.agents.DDQN_agent import DDQNTradingAgent
+from gym_anytrading2.envs.future_env import FuturesEnv
 from utils import MetricLogger
 
 torch.manual_seed(0)

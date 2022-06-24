@@ -24,7 +24,7 @@ class Positions(Enum):
 class TradingEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, df, window_size, initial_capital=100_00):
+    def __init__(self, df, window_size, initial_capital=100_000):
         assert df.ndim == 2
 
         self.seed()
@@ -55,7 +55,7 @@ class TradingEnv(gym.Env):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 
-    def reset(self):
+    def reset(self, return_info: bool = False, **kwargs):
         self._done = False
         self._current_tick = self._start_tick
         self._last_trade_tick = self._current_tick - 1
@@ -66,7 +66,15 @@ class TradingEnv(gym.Env):
         self._total_profit = 1.  # unit
         self._first_rendering = True
         self.history = {}
-        return self._get_observation()
+
+        if return_info:
+            return self._get_observation(), dict(
+                total_reward=self._total_reward,
+                total_profit=0,
+                position=self._position.value
+            )
+        else:
+            return self._get_observation()
 
     def step(self, action):
         self._done = False

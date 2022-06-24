@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='gym_anytrading-2.0',
+    name='gym_anytrading2',
     version='0.0.1',
     packages=find_packages(),
 
@@ -16,6 +16,6 @@ setup(
     ],
 
     package_data={
-        'gym_anytrading': ['datasets/data/*']
+        'gym_anytrading2': ['datasets/data/*']
     }
 )

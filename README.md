@@ -118,17 +118,16 @@ Besides, you can create your own customized environment by extending TradingEnv 
 
 ### Create an environment
 
-
 ```python
 import pandas as pd
-from gym_anytrading.envs import FuturesEnv
+from gym_anytrading2.envs import FuturesEnv
 
 cl_df = pd.read_csv(dataset_path, index_col=0)
 window_size = 21
 
 env = FuturesEnv(df=cl_df,
                  window_size=window_size,
-                frame_bound=(window_size, len(cl_df)))
+                 frame_bound=(window_size, len(cl_df)))
 
 ```
 
@@ -171,10 +170,9 @@ env.render()
 
 ### A complete example
 
-
 ```python
 import pandas as pd
-from gym_anytrading.envs import FuturesEnv
+from gym_anytrading2.envs import FuturesEnv
 import matplotlib.pyplot as plt
 
 dataset_path = './data/_path_to_dataset.csv'
@@ -184,16 +182,16 @@ window_size = 21
 
 env = FuturesEnv(df=cl_df,
                  window_size=window_size,
-                frame_bound=(window_size, 121))
+                 frame_bound=(window_size, 121))
 
 observation = env.reset()
 while True:
-    action = env.action_space.sample()
-    observation, reward, done, info = env.step(action)
-    # env.render()
-    if done:
-        print("info:", info)
-        break
+  action = env.action_space.sample()
+  observation, reward, done, info = env.step(action)
+  # env.render()
+  if done:
+    print("info:", info)
+    break
 
 plt.cla()
 env.render_all()
