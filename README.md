@@ -188,7 +188,7 @@ observation = env.reset()
 while True:
   action = env.action_space.sample()
   observation, reward, done, info = env.step(action)
-  # env.render()
+  
   if done:
     print("info:", info)
     break

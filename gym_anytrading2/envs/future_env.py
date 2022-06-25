@@ -198,6 +198,8 @@ class FuturesEnv(TradingEnv):
         return final_df
 
     def render_all(self, mode='human'):
+        plt.plot(self.prices)
+
         plt.plot(self.short_ticks, self.prices[self.short_ticks], 'ro')
         plt.plot(self.long_ticks, self.prices[self.long_ticks], 'go')
 
