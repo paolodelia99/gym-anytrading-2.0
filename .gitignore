@@ -11,3 +11,5 @@ build/
 examples/data
 examples/models
 examples/debug_env.py
+
+.pytest_cache

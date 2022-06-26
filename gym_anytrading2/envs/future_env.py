@@ -1,7 +1,9 @@
+from typing import Optional
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import MinMaxScaler
 
 from .trading_env import Actions, Positions
 from .trading_env import TradingEnv
@@ -17,8 +19,10 @@ class FuturesEnv(TradingEnv):
         assert len(frame_bound) == 2
 
         self.frame_bound = frame_bound
+        self.close_prices = df.close.values
+        self.open_prices = df.open.values
         df = self._preprocess_df(df)
-        super().__init__(df, window_size)
+        super().__init__(df, window_size, initial_capital)
 
         self.close_idx = int(np.where(self.sc.feature_names_in_ == 'close')[0][0])
         self.open_idx = int(np.where(self.sc.feature_names_in_ == 'open')[0][0])
@@ -30,21 +34,19 @@ class FuturesEnv(TradingEnv):
         self.short_ticks = []
         self.trade_on_close = trade_on_close
 
-    def reset(self, **kwargs):
-        self._done = False
-        self._current_tick = self._start_tick
-        self._last_trade_tick = self._current_tick - 1
-        self.is_trade_open = False
-        self._position = Positions.NoPosition
-        self._position_history = (self.window_size * [None]) + [self._position]
-        self._action_history = (self.window_size * [0]) + [Actions.Hold]
-        self._total_reward = 0.
+    def reset(self, *, seed: Optional[int] = None, return_info: bool = False, options: Optional[dict] = None):
+        super().reset(seed=seed)
         self._total_profit = self.initial_capital
-        self._first_rendering = True
-        self.history = {}
         self.long_ticks = []
         self.short_ticks = []
-        return self._get_observation()
+        if return_info:
+            return self._get_observation(), dict(
+                total_reward=self._total_reward,
+                total_profit=0,
+                position=self._position.value
+            )
+        else:
+            return self._get_observation()
 
     def _check_if_close_trade(self, action):
         if self._position == Positions.Short:
@@ -87,7 +89,8 @@ class FuturesEnv(TradingEnv):
         info = dict(
             total_reward=self._total_reward,
             total_profit=self._total_profit,
-            position=self._position.value
+            position=self._position.value,
+            action=action
         )
         self._update_history(info)
 
@@ -105,7 +108,7 @@ class FuturesEnv(TradingEnv):
         return prices, signal_features
 
     def _preprocess_df(self, df):
-        self.sc = StandardScaler()
+        self.sc = MinMaxScaler(feature_range=(-1, 1))
         self.df_index = df.index
         df = pd.DataFrame(self.sc.fit_transform(df), columns=df.columns, index=df.index)
         df = FuturesEnv._add_position_states(df)
@@ -119,18 +122,12 @@ class FuturesEnv(TradingEnv):
         df = df.assign(long=np.zeros(len(df)))
         return df
 
-    @staticmethod
-    def col_rev_scaling(close, sc: StandardScaler, close_idx: int):
-        return (close * np.sqrt(sc.var_[close_idx])) + sc.mean_[close_idx]
-
     def _get_trade_prices(self):
-        current_price = FuturesEnv.col_rev_scaling(self.prices[self._current_tick], self.sc, self.close_idx)
+        current_price = self.close_prices[self._current_tick]
         if self.trade_on_close:
-            last_trade_price = FuturesEnv.col_rev_scaling(self.prices[self._last_trade_tick], self.sc,
-                                                          self.close_idx)
+            last_trade_price = self.close_prices[self._last_trade_tick]
         else:
-            last_trade_price = FuturesEnv.col_rev_scaling(self.prices[self._last_trade_tick], self.sc,
-                                                          self.open_idx)
+            last_trade_price = self.open_prices[self._last_trade_tick]
 
         return last_trade_price, current_price
 
@@ -198,10 +195,10 @@ class FuturesEnv(TradingEnv):
         return final_df
 
     def render_all(self, mode='human'):
-        plt.plot(self.prices)
+        plt.plot(self.close_prices)
 
-        plt.plot(self.short_ticks, self.prices[self.short_ticks], 'ro')
-        plt.plot(self.long_ticks, self.prices[self.long_ticks], 'go')
+        plt.plot(self.short_ticks, self.close_prices[self.short_ticks], 'ro')
+        plt.plot(self.long_ticks, self.close_prices[self.long_ticks], 'go')
 
         plt.suptitle(
             "Total Reward: %.6f" % self._total_reward + ' ~ ' +

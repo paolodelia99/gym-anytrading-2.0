@@ -272,5 +272,7 @@ env = MyStocksEnv(prices, signal_features, df=STOCKS_GOOGL, window_size=30, fram
 ## Todos
 
 - [ ] Add continuous action
-- [ ] Improve render environment
-- [ ] clean the Future env class code
+- [x] Improve render environment
+- [ ] clean the Future env class code (working on it)
+- [ ] Add commissions
+- [ ] Add test

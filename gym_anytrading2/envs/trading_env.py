@@ -1,3 +1,5 @@
+from typing import Optional
+
 import gym
 from gym import spaces
 from gym.utils import seeding
@@ -24,10 +26,10 @@ class Positions(Enum):
 class TradingEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, df, window_size, initial_capital=100_000):
+    def __init__(self, df, window_size, initial_capital=100_000, seed: Optional[int] = None):
         assert df.ndim == 2
 
-        self.seed()
+        self.seed(seed)
         self.df = df
         self.window_size = window_size
         self.prices, self.signal_features = self._process_data()
@@ -35,18 +37,19 @@ class TradingEnv(gym.Env):
 
         # spaces
         self.action_space = spaces.Discrete(len(Actions))
-        self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=self.shape, dtype=np.float32)
+        self.observation_space = spaces.Box(low=-1.0, high=1.0, shape=self.shape, dtype=np.float32)
 
         # episode
         self._start_tick = self.window_size
         self._end_tick = len(self.prices) - 1
         self._done = None
-        self.is_trade_open = None
         self._current_tick = None
         self._last_trade_tick = None
         self._position = None
         self._position_history = None
-        self._total_reward = None
+        self._action_history = None
+        self._total_reward = 0.0
+        self.initial_capital = initial_capital
         self._total_profit = initial_capital
         self._first_rendering = None
         self.history = None
@@ -55,7 +58,8 @@ class TradingEnv(gym.Env):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 
-    def reset(self, return_info: bool = False, **kwargs):
+    def reset(self, *, seed: Optional[int] = None, return_info: bool = False, options: Optional[dict] = None):
+        super().reset(seed=seed)
         self._done = False
         self._current_tick = self._start_tick
         self._last_trade_tick = self._current_tick - 1
