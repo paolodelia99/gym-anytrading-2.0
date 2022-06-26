@@ -5,8 +5,11 @@ import numpy as np
 import gym
 from gym.utils.env_checker import check_env
 import gym_anytrading2
+from gym_anytrading2.datasets import CL_D
+from gym_anytrading2.envs import FuturesEnv, Positions, Actions
 
 seed = 42
+np.random.seed(seed)
 
 
 def test_env_init_conditions():
@@ -26,15 +29,15 @@ def test_env_init_conditions():
 
 
 def test_env_init_1():
-    env = gym.make('crude-oil-d-v0', window_size=42)
+    env = gym.make('crude-oil-d-v0', window_size=42, frame_bound=(42, len(CL_D)))
     obs = env.reset(seed=seed)
 
     assert obs.shape == (42, 20)
 
 
-def test_env_step():
+def test_env_step_basic():
     env = gym.make('crude-oil-d-v0')
-    env.reset(seed=seed)
+    env.reset()
     env.action_space.seed(seed)
 
     for i in range(100):

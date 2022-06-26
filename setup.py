@@ -9,10 +9,10 @@ setup(
     author_email='paolo.delia99@gmail.com',
 
     install_requires=[
-        'gym>=0.12.5',
-        'numpy>=1.16.4',
-        'pandas>=0.24.2',
-        'matplotlib>=3.1.1'
+        'gym>=0.21.0',
+        'numpy>=1.22.3',
+        'pandas>=1.4.1',
+        'matplotlib>=3.2.1'
     ],
 
     package_data={

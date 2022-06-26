@@ -69,7 +69,7 @@ class FuturesEnv(TradingEnv):
         if self._current_tick == self._end_tick:
             self._done = True
 
-        step_reward = self._calculate_reward(action)
+        step_reward = self._calculate_reward()
         self._total_reward += step_reward
 
         self._update_profit(action)
@@ -131,7 +131,7 @@ class FuturesEnv(TradingEnv):
 
         return last_trade_price, current_price
 
-    def _calculate_reward(self, action):
+    def _calculate_reward(self):
         last_trade_price, current_price = self._get_trade_prices()
         reward = 0
 
@@ -166,18 +166,22 @@ class FuturesEnv(TradingEnv):
         pass
 
     def _set_position(self, action, current_tick):
+        delay = 0 if self.trade_on_close else 1
+
         if action == Actions.Buy.value:
             self._position = Positions.Long
-            self.long_ticks.append(current_tick)
+            self.long_ticks.append(current_tick + delay)
         elif action == Actions.Sell.value:
             self._position = Positions.Short
-            self.short_ticks.append(current_tick)
+            self.short_ticks.append(current_tick + delay)
 
     def _set_no_position(self, current_tick):
+        delay = 0 if self.trade_on_close else 1
+
         if self._position == Positions.Short:
-            self.long_ticks.append(current_tick)
+            self.long_ticks.append(current_tick + delay)
         elif self._position == Positions.Long:
-            self.short_ticks.append(current_tick)
+            self.short_ticks.append(current_tick + delay)
 
         self._position = Positions.NoPosition
 
