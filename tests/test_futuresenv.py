@@ -3,6 +3,7 @@ import pytest
 import numpy as np
 
 import gym
+from gym.wrappers import FlattenObservation
 from gym.utils.env_checker import check_env
 import gym_anytrading2
 from gym_anytrading2.datasets import CL_D
@@ -46,3 +47,11 @@ def test_env_step_basic():
         assert type(done) is bool
         assert type(info) is dict
         assert obs.shape == (21, 20)
+
+
+def test_flattened_obs():
+    env = gym.make('crude-oil-d-v0')
+    wrap_env = FlattenObservation(env)
+    obs = wrap_env.reset()
+
+    assert obs.shape == (420,)

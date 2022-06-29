@@ -26,9 +26,6 @@ pip install -e .
 ![f-mdp](docs/mdp_f.png)
 
 The two main differences from the original projects are in the way the rewards are calculated and in the possible actions.
-Differently from the idea of many papers, in the gym-anytrading-2.0 the step rewards are calculated  in the 
-
-The two main differences from the original projects are in the way the rewards are calculated and in the possible actions.
 First, a **hold** action is added to the all to the agent's arsenal of possible actions. Consequently, 
 also a **NoPosition** is being added to the possible position state. 
 Differently from the idea of many papers, in the `gym-anytrading-2.0` the step rewards are calculated in the following way: 
@@ -46,6 +43,9 @@ Furthermore, FutureEnv does implement a simple money management rule: the **Fixe
 position sizing**, also known as **fixed risk** position sizing because it risks the same 
 percentage or fraction of account equity on each trade. For example, you might risk 2% of 
 your account equity on each trade (the "2% rule").
+
+The input data given to the `FuturesEnv` class is scaled using a `MinMaxScaler`, so you don't have to worry about the data 
+scaling before. 
 
 ## Trading Environments
 
@@ -143,7 +143,6 @@ print("> shape:", env.shape)
 print("> df.shape:", env.df.shape)
 print("> prices.shape:", env.prices.shape)
 print("> signal_features.shape:", env.signal_features.shape)
-print("> max_possible_profit:", env.max_possible_profit())
 ```
 
     env information:
@@ -151,7 +150,6 @@ print("> max_possible_profit:", env.max_possible_profit())
     > df.shape: (6225, 5)
     > prices.shape: (6225,)
     > signal_features.shape: (6225, 2)
-    > max_possible_profit: 4.054414887146586
 
 ### Plot the environment
 
@@ -273,6 +271,8 @@ env = MyStocksEnv(prices, signal_features, df=STOCKS_GOOGL, window_size=30, fram
 
 - [ ] Add continuous action
 - [x] Improve render environment
-- [ ] clean the Future env class code (working on it)
+- [x] clean the Future env class code (working on it)
 - [ ] Add commissions
 - [ ] Add test
+  - [x] Basic tests
+  - [ ] Add further tests about the `step()` method
