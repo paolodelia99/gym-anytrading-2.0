@@ -11,5 +11,6 @@ build/
 examples/data
 examples/models
 examples/debug_env.py
+examples/sb-dqn-test.ipynb
 
 .pytest_cache

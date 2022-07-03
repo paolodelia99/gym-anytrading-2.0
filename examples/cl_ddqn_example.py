@@ -53,7 +53,6 @@ def model_testing(env, agent):
     env.render_all()
     plt.title(f'Testing')
     plt.savefig(f'models/ddqn_cl_checkpoints/2022-06-15T15-05-57/cl_res.png', dpi=300)
-    env.get_trading_df().to_csv('models/ddqn_cl_checkpoints/2022-06-15T15-05-57/testing_set.csv')
 
 
 def train_loop(env, episodes: int, agent, logger):

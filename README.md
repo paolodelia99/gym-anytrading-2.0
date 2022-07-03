@@ -276,3 +276,4 @@ env = MyStocksEnv(prices, signal_features, df=STOCKS_GOOGL, window_size=30, fram
 - [ ] Add test
   - [x] Basic tests
   - [ ] Add further tests about the `step()` method
+- [ ] change the reward function [Financial Market as a Game] 

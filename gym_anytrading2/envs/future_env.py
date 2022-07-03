@@ -14,8 +14,7 @@ class FuturesEnv(TradingEnv):
     def __init__(self, df, window_size, frame_bound, pos_size: float = 0.05,
                  risk_per_contract=1_000,
                  point_value=1_000,
-                 initial_capital=1_000_000,
-                 trade_on_close: bool = True):
+                 initial_capital=1_000_000):
         assert len(frame_bound) == 2
 
         self.frame_bound = frame_bound
@@ -30,9 +29,9 @@ class FuturesEnv(TradingEnv):
         self.initial_capital = initial_capital
         self.risk_per_contract = risk_per_contract
         self.point_value = point_value
+        self.account_values = [self.initial_capital]
         self.long_ticks = []
         self.short_ticks = []
-        self.trade_on_close = trade_on_close
 
     def reset(self, *, seed: Optional[int] = None, return_info: bool = False, options: Optional[dict] = None):
         super().reset(seed=seed)
@@ -49,10 +48,8 @@ class FuturesEnv(TradingEnv):
             return self._get_observation()
 
     def _check_if_close_trade(self, action):
-        if self._position == Positions.Short:
-            return action == Actions.Buy.value
-        elif self._position == Positions.Long:
-            return action == Actions.Sell.value
+        if self._position == Positions.Short or self._position == Positions.Long:
+            return action == Actions.Close.value
         else:
             return False
 
@@ -62,23 +59,17 @@ class FuturesEnv(TradingEnv):
 
         return False
 
-    def step(self, action):
+    def step(self, action: int):
         self._done = False
         self._current_tick += 1
 
         if self._current_tick == self._end_tick:
             self._done = True
 
-        step_reward = self._calculate_reward()
+        step_reward = self._calculate_reward(action)
         self._total_reward += step_reward
 
-        self._update_profit(action)
-
         if self._check_if_open_trade(action):
-            if self.trade_on_close:
-                self._last_trade_tick = self._current_tick
-            else:
-                self._last_trade_tick = self._current_tick + 1
             self._set_position(action, self._current_tick)
         elif self._check_if_close_trade(action):
             self._set_no_position(self._current_tick)
@@ -122,42 +113,17 @@ class FuturesEnv(TradingEnv):
         df = df.assign(long=np.zeros(len(df)))
         return df
 
-    def _get_trade_prices(self):
-        current_price = self.close_prices[self._current_tick]
-        if self.trade_on_close:
-            last_trade_price = self.close_prices[self._last_trade_tick]
-        else:
-            last_trade_price = self.open_prices[self._last_trade_tick]
+    def _calculate_reward(self, action: int):
+        prev_account_value = self.account_values[-1]
+        c = int(np.floor((self._total_profit * self.pos_size) / self.risk_per_contract)) * 10
+        d_returns = ((self.close_prices[self._current_tick] / self.open_prices[self._current_tick]) - 1)
+        commission = c * np.abs(action - self._action_history[-1].value)
+        current_account_value = prev_account_value + action * c * d_returns - commission
+        r = np.log(current_account_value / prev_account_value)
+        self.account_values.append(current_account_value)
+        self._total_profit = current_account_value
 
-        return last_trade_price, current_price
-
-    def _calculate_reward(self):
-        last_trade_price, current_price = self._get_trade_prices()
-        reward = 0
-
-        if self._position == Positions.Long:
-            reward = np.log(np.abs(current_price / last_trade_price))
-        elif self._position == Positions.Short:
-            reward = np.log(np.abs(last_trade_price / current_price))
-
-        if current_price < 0 and last_trade_price > 0:
-            reward = - reward
-
-        return reward
-
-    def _update_profit(self, action):
-
-        if self._check_if_close_trade(action) or self._done:
-            last_trade_price, current_price = self._get_trade_prices()
-
-            n_contracts = np.floor((self._total_profit * self.pos_size) / self.risk_per_contract)
-
-            if self._position == Positions.Long:
-                pos_profit = (current_price - last_trade_price) * self.point_value * n_contracts
-                self._total_profit += pos_profit
-            elif self._position == Positions.Short:
-                pos_profit = (last_trade_price - current_price) * self.point_value * n_contracts
-                self._total_profit += pos_profit
+        return r
 
     def get_account_value(self):
         return self._total_profit
@@ -166,37 +132,20 @@ class FuturesEnv(TradingEnv):
         pass
 
     def _set_position(self, action, current_tick):
-        delay = 0 if self.trade_on_close else 1
-
         if action == Actions.Buy.value:
             self._position = Positions.Long
-            self.long_ticks.append(current_tick + delay)
+            self.long_ticks.append(current_tick)
         elif action == Actions.Sell.value:
             self._position = Positions.Short
-            self.short_ticks.append(current_tick + delay)
+            self.short_ticks.append(current_tick)
 
     def _set_no_position(self, current_tick):
-        delay = 0 if self.trade_on_close else 1
-
         if self._position == Positions.Short:
-            self.long_ticks.append(current_tick + delay)
+            self.long_ticks.append(current_tick)
         elif self._position == Positions.Long:
-            self.short_ticks.append(current_tick + delay)
+            self.short_ticks.append(current_tick)
 
         self._position = Positions.NoPosition
-
-    def get_trading_df(self):
-        start = self.frame_bound[0] - self.window_size
-        end = self.frame_bound[1]
-        final_df = pd.DataFrame(
-            self.sc.inverse_transform(np.concatenate([self.prices.reshape(-1, 1), self.signal_features], axis=1)),
-            columns=self.df_cols,
-            index=self.df_index[start:end]
-        )
-        final_df.loc[:, 'action'] = np.array(self._action_history)
-        final_df.loc[:, 'total_profit'] = np.array(
-            ((self.window_size + 1) * [self.initial_capital]) + self.history['total_profit'])
-        return final_df
 
     def render_all(self, mode='human'):
         plt.plot(self.close_prices)
@@ -216,8 +165,8 @@ class FuturesEnv(TradingEnv):
 
         if self._current_tick != self._end_tick:
             if self._position == Positions.Long:
-                self.signal_features[self._current_tick + 1, last_col_idx - 3:last_col_idx] = np.array([1, 0, 0])
+                self.signal_features[self._current_tick, last_col_idx - 3:last_col_idx] = np.array([1, 0, 0])
             elif self._position == Positions.Short:
-                self.signal_features[self._current_tick + 1, last_col_idx - 3:last_col_idx] = np.array([0, 0, 1])
+                self.signal_features[self._current_tick, last_col_idx - 3:last_col_idx] = np.array([0, 0, 1])
             elif self._position == Positions.NoPosition:
-                self.signal_features[self._current_tick + 1, last_col_idx - 3:last_col_idx] = np.array([0, 1, 0])
+                self.signal_features[self._current_tick, last_col_idx - 3:last_col_idx] = np.array([0, 1, 0])
