@@ -9,9 +9,9 @@ import matplotlib.pyplot as plt
 
 
 class Actions(Enum):
-    Close = 0
-    Sell = -1
-    Buy = 1
+    Sell = 0
+    Close = 1
+    Buy = 2
 
 
 class Positions(Enum):
@@ -64,7 +64,7 @@ class TradingEnv(gym.Env):
         self._last_trade_tick = self._current_tick - 1
         self._position = Positions.NoPosition
         self._position_history = (self.window_size * [Positions.NoPosition]) + [self._position]
-        self._action_history = (self.window_size * [Actions.Close]) + [Actions.Close]
+        self._action_history = (self.window_size * [Actions.Close.value]) + [Actions.Close.value]
         self._total_reward = 0.
         self._total_profit = 1.  # unit
         self._first_rendering = True
